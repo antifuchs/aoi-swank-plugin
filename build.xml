@@ -27,6 +27,7 @@
       <fileset dir="${src}" />
     </copy>
     <copy file="${extensions}" todir="${build}"/>
+    <copy file="epl-v10.html" todir="${build}"/>
   </target>
 
   <target name="compile" depends="copy">
