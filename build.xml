@@ -1,0 +1,47 @@
+<project name="aoi-swank" default="plugin" xmlns:mvn="urn:maven-artifact-ant">
+  <property file="build.properties" />
+  
+  <property name="src" location="src" />
+  <property name="build" location="build" />
+  <property name="plugins" location="Plugins" />
+  <property name="extensions" location="extensions.xml"/>
+  <property name="clojure_jar" location="lib/clojure.jar" />
+  <property name="aoi_jar" location="${aoidir}/ArtOfIllusion.jar" />
+  <property name="aoi_tools_jar" location="${aoidir}/Plugins/Tools.jar" />  
+  <property name="swank" location="lib/swank-clojure/swank" />
+
+  <property name="plugin_jar" location="${plugins}/SwankRepl.jar"/>
+
+
+  <target name="init">
+    <tstamp/>
+    <mkdir dir="${build}" />
+    <mkdir dir="${plugins}" />
+  </target>
+
+  <target name="copy" depends="init">
+    <copy todir="${build}/swank">
+      <fileset dir="${swank}" />
+    </copy>
+    <copy todir="${build}">
+      <fileset dir="${src}" />
+    </copy>
+    <copy file="${extensions}" todir="${build}"/>
+  </target>
+
+  <target name="compile" depends="copy">
+    <java classname="clojure.lang.Compile"
+          classpath="${build}:${clojure_jar}:${aoi_jar}:${aoi_tools_jar}">
+      <sysproperty key="clojure.compile.path" value="${build}" />
+      <arg value="org.reprap.artofillusion.SwankPlugin" />
+      <arg value="org.reprap.artofillusion.SwankTool" />
+    </java>
+  </target>
+
+  <target name="plugin" depends="compile">
+    <jar jarfile="${plugin_jar}" filesetmanifest="merge">
+      <fileset dir="${build}" />
+      <zipfileset src="${clojure_jar}"/>
+    </jar>
+  </target>
+</project>

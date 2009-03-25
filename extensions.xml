@@ -1,0 +1,19 @@
+<?xml version='1.0'?>
+
+<extension name="SwankREPL" version="1.2">
+  <plugin class="org.reprap.artofillusion.SwankPlugin"/> 
+  <plugin class="org.reprap.artofillusion.SwankTool"/> 
+
+  <author>Andreas Fuchs (asf@boinkor.net)</author>
+  <description>
+    Clojure/Swank REPL plugin: Opens a Swank listener on localhost:4007
+    and lets you connect to it from emacs.
+  </description>
+  <history> 
+    <log version="0.0" date="2009-03-25" author="Andreas Fuchs (asf@boinkor.net)">
+      Initial barebones version.
+    </log>
+  </history>
+  <comments>
+  </comments>
+</extension>
