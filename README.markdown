@@ -1,14 +1,14 @@
 This is a simple plugin for Art of Illusion. Also, it serves as an example for how to embed clojure in a large java system.
 
-= How to build =
+# How to build
 
 You'll need:
 
 * Art of Illusion
 * Emacs and these packages:
-** Slime (http://common-lisp.net/project/slime)
-** Clojure-mode (http://github.com/jochu/clojure-mode)
-** Swank-clojure (http://github.com/jochu/swank-clojure)
+ * Slime (http://common-lisp.net/project/slime)
+ * Clojure-mode (http://github.com/jochu/clojure-mode)
+ * Swank-clojure (http://github.com/jochu/swank-clojure)
 
 To build the plugin, follow these steps:
 
