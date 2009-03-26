@@ -6,17 +6,21 @@
 ;;; the terms of this license.
 ;;; You must not remove this notice, or any other, from this software.
 
-
 (ns org.reprap.artofillusion.SwankTool
   (:require swank.swank clojure.main)
   (:gen-class
    :implements [artofillusion.ModellingTool]
    :prefix "tool-"))
 
+(defonce *tool-window* (ref {}))
+
 (defn tool-getName [this]
   "Start Swank REPL")
 
 (defn tool-commandSelected [this window]
-  (clojure.main/with-bindings 
-   (swank.swank/ignore-protocol-version "2009-03-25") 
-   (swank.swank/start-server "/dev/null" :port 4006 :encoding "iso-latin-1-unix")))
+  (let [port 4006]
+    (clojure.main/with-bindings
+     (dosync (alter *tool-window* conj [port window]))
+     (swank.swank/ignore-protocol-version "2009-03-25") 
+     (swank.swank/start-server "/dev/null" :port port
+                               :encoding "iso-latin-1-unix"))))
