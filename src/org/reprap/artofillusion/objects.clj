@@ -6,7 +6,8 @@
            (artofillusion
             UndoRecord)
            (artofillusion.math
-            CoordinateSystem)
+            CoordinateSystem
+            Vec3)
            (artofillusion.object
             ObjectInfo
             CSGObject)))
@@ -75,8 +76,15 @@ parent."
   ([cs] (if (isa? (class cs) CoordinateSystem)
           cs
           (apply make-cs cs)))
-  ([x y z] (doto (new CoordinateSystem)
-             (.setOrientation x y z))))
+  ([x y z]
+     (doto (new CoordinateSystem)
+       (.setOrigin (new Vec3 x y z))))
+  ([x y z
+    orientation-x orientation-y orientation-z]
+     (let [cs (new CoordinateSystem)]
+       (.setOrigin cs (new Vec3 x y z))
+       (.setOrientation cs orientation-x orientation-y orientation-z)
+       cs)))
 
 (defn object*
   "Make an AoI ObjectInfo object from a 3dObject or CSGObject or another ObjectInfo."
@@ -130,13 +138,13 @@ parent."
                              :difference (CSGObject/DIFFERENCE12)})
 
 (defn csg-object [operation object1 object2 & objects]
-  (let [operation (get *csg-translations* operation)
-        csg (new CSGObject
-                 (object* object1)
-                 (object* object2)
-                 operation)]
+  (let* [operation (get *csg-translations* operation)]
+        (println operation (object* object1) (object* object2))
     (loop [objects objects
-           csg csg]
+           csg (new CSGObject
+                  (object* object1)
+                  (object* object2)
+                  operation)]
       (if (empty? objects)
         (object* csg)
         (recur (rest objects)
@@ -169,7 +177,7 @@ parent."
     (adjust-object* (apply union root-objects) keys)
     (adjust-object* (first root-objects) keys)))
 
-(defmacro def-tree [[window name & keys] & body]
+(defmacro def-tree [[window name & [keys]] & body]
   `(let [window# ~window
          name# ~name
          keys# (or ~keys {})]
