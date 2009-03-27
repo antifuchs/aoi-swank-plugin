@@ -12,9 +12,8 @@
 
 ;;; Manipulating the scene itself:
 
-(defn scene
-  ([] (scene (org.reprap.artofillusion.repl/window)))
-  ([window] (.getScene window)))
+(defn scene [window]
+  (.getScene window))
 
 ;;; Manipulating the current selection:
 
