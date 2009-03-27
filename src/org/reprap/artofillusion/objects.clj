@@ -72,33 +72,35 @@ parent."
 
 (defn make-cs
   ([] (new CoordinateSystem))
+  ([cs] (if (isa? (class cs) CoordinateSystem)
+          cs
+          (apply make-cs cs)))
   ([x y z] (doto (new CoordinateSystem)
              (.setOrientation x y z))))
 
-(defn objspec-object-info
+(defn object*
+  "Make an AoI ObjectInfo object from a 3dObject or CSGObject or another ObjectInfo."
   ([object]
      (if (isa? (class object) ObjectInfo)
        object
-       (objspec-object-info object (object-name object) (make-cs))))
-  ([object name-or-cs]
-     (if (isa? (class name-or-cs) String)
-       (objspec-object-info object name-or-cs (make-cs))
-       (objspec-object-info object (object-name object)
-                            (apply make-cs name-or-cs))))
-  ([object name cs]
-     (new ObjectInfo object cs name))
-  ([object name x y z]
-     (new ObjectInfo object (make-cs x y z) name)))
+       (object* object {})))
+  ([object keys]
+     (new ObjectInfo object
+          (apply make-cs (or (get keys :cs) []))
+          (or (get keys :name) (object-name object)))))
+
+(defn adjust-object* [object keys]
+  (println keys)
+  (if-let [cs-raw (get keys :cs)]
+    (.setCoords object (apply make-cs cs-raw)))
+  (if-let [name (get keys :name)]
+    (.setName object name))
+  object)
 
 (defn add-object [object-info window]
   (with-undo-record window
     (.addObject window object-info *current-undo-record*)
     object-info))
-
-(defn add-objects [window & objspecs]
-  (with-undo-record window
-    (for [objspec objspecs]
-      (add-object (apply objspec-object-info objspec) window))))
 
 ;;; Finding objects:
 
@@ -130,17 +132,17 @@ parent."
 (defn csg-object [operation object1 object2 & objects]
   (let [operation (get *csg-translations* operation)
         csg (new CSGObject
-                 (objspec-object-info object1)
-                 (objspec-object-info object2)
+                 (object* object1)
+                 (object* object2)
                  operation)]
     (loop [objects objects
            csg csg]
       (if (empty? objects)
-        (objspec-object-info csg)
+        (object* csg)
         (recur (rest objects)
                (new CSGObject
-                    (objspec-object-info csg)
-                    (objspec-object-info (first objects))
+                    (object* csg)
+                    (object* (first objects))
                     operation))))))
 
 (defn union [object1 object2 & rest]
@@ -152,10 +154,25 @@ parent."
 (defn difference [object1 object2 & rest]
   (apply csg-object :difference object1 object2 rest))
 
-(defn cube [x y z]
-  (new Cube x y z))
+(defn cube [x y z & [keys {}]]
+  (object* (new Cube x y z) keys))
 
 (defn cylinder
-  ([x y z] (cylinder x y z 1))
-  ([x y z ratio] (new Cylinder x y z ratio)))
+  ([height xradius yradius & [keys {}]]
+     (object* (new Cylinder height xradius yradius (or (get keys :ratio) 1.0))
+              keys)))
 
+;;; A surface syntax for specifying object trees:
+
+(defn make-tree [keys & root-objects]
+  (if (> (count root-objects) 1)
+    (adjust-object* (apply union root-objects) keys)
+    (adjust-object* (first root-objects) keys)))
+
+(defmacro def-tree [[window name & keys] & body]
+  `(let [window# ~window
+         name# ~name
+         keys# (or ~keys {})]
+     (delete-object name# window#)
+     (println keys#)
+     (add-object (make-tree (conj keys# [:name ~name]) ~@body) window#)))
