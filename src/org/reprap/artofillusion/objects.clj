@@ -8,7 +8,8 @@
            (artofillusion.math
             CoordinateSystem)
            (artofillusion.object
-            ObjectInfo)))
+            ObjectInfo
+            CSGObject)))
 
 ;;; Manipulating the scene itself:
 
@@ -69,18 +70,19 @@ parent."
 (defn object-name [object]
   (print-str object))
 
-(defn make-cs [x y z]
-  (doto (new CoordinateSystem)
-    (.setOrientation x y z)))
+(defn make-cs
+  ([] (new CoordinateSystem))
+  ([x y z] (doto (new CoordinateSystem)
+             (.setOrientation x y z))))
 
 (defn objspec-object-info
   ([object]
-     (objspec-object-info object (object-name object)
-                          (make-cs 0 0 0)))
+     (if (isa? (class object) ObjectInfo)
+       object
+       (objspec-object-info object (object-name object) (make-cs))))
   ([object name-or-cs]
-     (if (isa? name-or-cs String)
-       (objspec-object-info object name-or-cs
-                            (make-cs 0 0 0))
+     (if (isa? (class name-or-cs) String)
+       (objspec-object-info object name-or-cs (make-cs))
        (objspec-object-info object (object-name object)
                             (apply make-cs name-or-cs))))
   ([object name cs]
@@ -90,7 +92,8 @@ parent."
 
 (defn add-object [object-info window]
   (with-undo-record window
-    (.addObject window object-info *current-undo-record*)))
+    (.addObject window object-info *current-undo-record*)
+    object-info))
 
 (defn add-objects [window & objspecs]
   (with-undo-record window
@@ -119,6 +122,35 @@ parent."
                        *current-undo-record*)))))
 
 ;;; Creating new objects:
+
+(defonce *csg-translations* {:union (CSGObject/UNION)
+                             :intersection (CSGObject/INTERSECTION)
+                             :difference (CSGObject/DIFFERENCE12)})
+
+(defn csg-object [operation object1 object2 & objects]
+  (let [operation (get *csg-translations* operation)
+        csg (new CSGObject
+                 (objspec-object-info object1)
+                 (objspec-object-info object2)
+                 operation)]
+    (loop [objects objects
+           csg csg]
+      (if (empty? objects)
+        (objspec-object-info csg)
+        (recur (rest objects)
+               (new CSGObject
+                    (objspec-object-info csg)
+                    (objspec-object-info (first objects))
+                    operation))))))
+
+(defn union [object1 object2 & rest]
+  (apply csg-object :union object1 object2 rest))
+
+(defn intersection [object1 object2 & rest]
+  (apply csg-object :intersection object1 object2 rest))
+
+(defn difference [object1 object2 & rest]
+  (apply csg-object :difference object1 object2 rest))
 
 (defn cube [x y z]
   (new Cube x y z))
