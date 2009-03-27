@@ -52,9 +52,12 @@ parent."
 (defonce *current-undo-record* nil)
 
 (defmacro with-undo-record [window & body]
-  `(binding [*current-undo-record* (new UndoRecord ~window false)]
-     (.setUndoRecord ~window *current-undo-record*)
-     ~@body))
+  `(if (nil? *current-undo-record*)
+     (binding [*current-undo-record* (new UndoRecord ~window false)]
+       (let [value# (do ~@body)]
+         (.setUndoRecord ~window *current-undo-record*)
+         value#))
+     (do ~@body)))
 
 ;;; Adding an object to a window:
 
@@ -80,11 +83,14 @@ parent."
   ([object name x y z]
      (new ObjectInfo object (make-cs x y z) name)))
 
+(defn add-object [object-info window]
+  (with-undo-record window
+    (.addObject window object-info *current-undo-record*)))
+
 (defn add-objects [window & objspecs]
   (with-undo-record window
     (for [objspec objspecs]
-      (.addObject window (apply objspec-object-info objspec)
-                  *current-undo-record*))))
+      (add-object (apply objspec-object-info objspec) window))))
 
 ;;; Creating new objects:
 
