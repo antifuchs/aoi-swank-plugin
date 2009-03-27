@@ -112,11 +112,12 @@ parent."
 
 (defn delete-object [name window]
   (with-undo-record window
-    (let [object (find-object name window)]
-      (doseq [child (.getChildren object)]
-        (delete-object child window))
-      (.removeObject window (position-of-object object window)
-                     *current-undo-record*))))
+    (if-let [object (find-object name window)]
+      (do
+        (doseq [child (.getChildren object)]
+          (delete-object child window))
+        (.removeObject window (position-of-object object window)
+                       *current-undo-record*)))))
 
 ;;; Creating new objects:
 
