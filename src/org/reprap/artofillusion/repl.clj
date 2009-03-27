@@ -7,26 +7,10 @@
 ;;; You must not remove this notice, or any other, from this software.
 
 (ns org.reprap.artofillusion.repl
-  (:require clojure))
+  (:refer-clojure))
 
-(defn any-parent-selected? [object window]
-  (loop [parent (.getParent object)]
-    (cond
-      (nil? parent) false
-      (.isObjectSelected window parent) true
-      true (recur (.getParent parent)))))
+(defonce *tool-windows* (ref {}))
 
-(defn current-selection
-  "Returns a normalized selection, i.e. one without children of a selected 
-parent."
-  ([window]
-     (loop [selection (.getSelectedObjects window)
-            normalized-selection []]
-       (let [current-object (first selection)]
-         (cond
-           (nil? current-object) normalized-selection
-           (any-parent-selected? current-object window) (recur (rest selection)
-                                                               normalized-selection)
-           true (recur (rest selection)
-                       (conj normalized-selection current-object)))))))
-
+(defn window
+  ([] (window 4006))
+  ([port] (get (deref *tool-windows*) port)))

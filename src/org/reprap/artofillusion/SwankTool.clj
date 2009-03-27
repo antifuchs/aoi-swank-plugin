@@ -7,15 +7,17 @@
 ;;; You must not remove this notice, or any other, from this software.
 
 (ns org.reprap.artofillusion.SwankTool
-  (:require swank.swank clojure.main)
+  (:require swank.swank
+            clojure.main
+            org.reprap.artofillusion.repl)
+  (:refer-clojure)
+  (:use org.reprap.artofillusion.repl)
   (:gen-class
    :implements [artofillusion.ModellingTool]
    :prefix "tool-"))
 
-(defonce *tool-windows* (ref {}))
-
 (defn tool-getName [this]
-  "Start Swank REPL")
+  "Start Swank REPL on port 4006")
 
 (defn tool-commandSelected [this window]
   (let [port 4006]
