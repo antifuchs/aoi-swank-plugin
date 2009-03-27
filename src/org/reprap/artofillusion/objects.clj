@@ -10,6 +10,12 @@
            (artofillusion.object
             ObjectInfo)))
 
+;;; Manipulating the scene itself:
+
+(defn scene
+  ([] (scene (org.reprap.artofillusion.repl/window)))
+  ([window] (.getScene window)))
+
 ;;; Manipulating the current selection:
 
 (defn any-parent-selected? [object window]
@@ -91,6 +97,26 @@ parent."
   (with-undo-record window
     (for [objspec objspecs]
       (add-object (apply objspec-object-info objspec) window))))
+
+;;; Finding objects:
+
+(defn find-object [name window]
+  (if (isa? (class name) ObjectInfo)
+    name
+    (.getObject (scene window) name)))
+
+(defn position-of-object [name window]
+  (.indexOf (scene window) (find-object name window)))
+
+;;; Removing objects:
+
+(defn delete-object [name window]
+  (with-undo-record window
+    (let [object (find-object name window)]
+      (doseq [child (.getChildren object)]
+        (delete-object child window))
+      (.removeObject window (position-of-object object window)
+                     *current-undo-record*))))
 
 ;;; Creating new objects:
 
