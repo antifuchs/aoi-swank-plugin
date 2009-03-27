@@ -7,7 +7,8 @@
 ;;; You must not remove this notice, or any other, from this software.
 
 (ns org.reprap.artofillusion.repl
-  (:refer-clojure))
+  (:refer-clojure)
+  (:use (org.reprap.artofillusion objects)))
 
 (defonce *tool-windows* (ref {}))
 
