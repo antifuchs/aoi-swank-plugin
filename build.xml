@@ -6,6 +6,7 @@
   <property name="plugins" location="Plugins" />
   <property name="extensions" location="extensions.xml"/>
   <property name="clojure_jar" location="lib/clojure.jar" />
+  <property name="clojure_contrib_jar" location="lib/clojure-contrib.jar" />
   <property name="aoi_jar" location="${aoidir}/ArtOfIllusion.jar" />
   <property name="aoi_tools_jar" location="${aoidir}/Plugins/Tools.jar" />  
   <property name="swank" location="lib/swank-clojure/swank" />
@@ -32,7 +33,7 @@
 
   <target name="compile" depends="copy">
     <java classname="clojure.lang.Compile"
-          classpath="${build}:${clojure_jar}:${aoi_jar}:${aoi_tools_jar}">
+          classpath="${build}:${clojure_jar}:${clojure_contrib_jar}:${aoi_jar}:${aoi_tools_jar}">
       <sysproperty key="clojure.compile.path" value="${build}" />
       <arg value="org.reprap.artofillusion.SwankPlugin" />
       <arg value="org.reprap.artofillusion.SwankTool" />
@@ -43,6 +44,7 @@
     <jar jarfile="${plugin_jar}" filesetmanifest="merge">
       <fileset dir="${build}" />
       <zipfileset src="${clojure_jar}"/>
+      <zipfileset src="${clojure_contrib_jar}"/>
     </jar>
   </target>
 </project>
