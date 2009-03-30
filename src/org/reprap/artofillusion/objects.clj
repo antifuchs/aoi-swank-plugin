@@ -1,5 +1,6 @@
 (ns org.reprap.artofillusion.objects
   (:refer-clojure)
+  (:use clojure.contrib.seq-utils)
   (:import (artofillusion.object
             Cube
             Cylinder)
@@ -71,20 +72,35 @@ parent."
 (defn object-name [object]
   (print-str object))
 
+(def *current-origin* (new Vec3 0 0 0))
+(def *current-orientation* (new Vec3 0 0 0))
+
 (defn make-cs
-  ([] (new CoordinateSystem))
-  ([cs] (if (isa? (class cs) CoordinateSystem)
-          cs
-          (apply make-cs cs)))
+  ([]
+     (make-cs :relative 0 0 0 0 0 0))
   ([x y z]
-     (doto (new CoordinateSystem)
-       (.setOrigin (new Vec3 x y z))))
+     (make-cs :relative x y z))
+  ([kind x y z]
+     (make-cs kind x y z 0 0 0))
   ([x y z
     orientation-x orientation-y orientation-z]
-     (let [cs (new CoordinateSystem)]
-       (.setOrigin cs (new Vec3 x y z))
-       (.setOrientation cs orientation-x orientation-y orientation-z)
-       cs)))
+     (make-cs :relative x y z orientation-x orientation-y orientation-z))
+  ([kind
+    x y z
+    orientation-x orientation-y orientation-z]
+     (condp = kind
+       :relative (let [origin (.plus *current-origin* (new Vec3 x y z))
+                       orient (.plus *current-orientation*
+                                     (new Vec3 orientation-x orientation-y orientation-z))]
+                   (make-cs :absolute (.x origin) (.y origin) (.z origin)
+                            (.x orient) (.y orient) (.z orient)))
+       :absolute (let [cs (new CoordinateSystem)]
+                   (.setOrigin cs (new Vec3 x y z))
+                   (.setOrientation cs orientation-x orientation-y orientation-z)
+                   cs))))
+
+(defn vec3-coords [vec]
+  [(.x vec) (.y vec) (.z vec)])
 
 (defn object*
   "Make an AoI ObjectInfo object from a 3dObject or CSGObject or another ObjectInfo."
@@ -94,11 +110,13 @@ parent."
        (object* object {})))
   ([object keys]
      (new ObjectInfo object
-          (apply make-cs (or (get keys :cs) []))
+          (apply make-cs
+                 (if-let [cs (get keys :cs)]
+                   cs
+                   []))
           (or (get keys :name) (object-name object)))))
 
 (defn adjust-object* [object keys]
-  (println keys)
   (if-let [cs-raw (get keys :cs)]
     (.setCoords object (apply make-cs cs-raw)))
   (if-let [name (get keys :name)]
@@ -131,36 +149,69 @@ parent."
         (.removeObject window (position-of-object object window)
                        *current-undo-record*)))))
 
+;;; Transformations:
+
+(defn invoke-with-origin [origin-vec reset-origin? fn]
+  (binding [*current-origin* (if reset-origin?
+                               origin-vec
+                               (.plus *current-origin* origin-vec))]
+    (fn)))
+
+(defn invoke-with-orientation [vec reset-orientation? fn]
+  (binding [*current-orientation* (if reset-orientation?
+                                    vec
+                                    (.plus *current-orientation* vec))]
+     (fn)))
+
+(defmacro originate [[x y z & reset-origin?] & body]
+  `(invoke-with-origin (new Vec3 ~x ~y ~z)
+                       ~(first reset-origin?)
+                       (fn [] [~@body])))
+
+(defmacro orient [[x y z & reset-orientation?] & body]
+  `(invoke-with-orientation (new Vec3 ~x ~y ~z)
+                            ~(first reset-orientation?)
+                            (fn [] [~@body])))
+
+(defmacro transforming [[[& origin] [& orientation]] & body]
+  (let [origin-body (if origin
+                      `((originate [~@origin] ~@body))
+                      body)]
+    (let [orientation-body (if orientation
+                             `(orient [~@orientation] ~@origin-body)
+                             (first origin-body))]
+      orientation-body)))
+
 ;;; Creating new objects:
 
 (defonce *csg-translations* {:union (CSGObject/UNION)
                              :intersection (CSGObject/INTERSECTION)
                              :difference (CSGObject/DIFFERENCE12)})
 
-(defn csg-object [operation object1 object2 & objects]
-  (let* [operation (get *csg-translations* operation)]
-        (println operation (object* object1) (object* object2))
-    (loop [objects objects
-           csg (new CSGObject
-                  (object* object1)
-                  (object* object2)
-                  operation)]
+(defn csg-object [operation objects]
+  (let [operation (get *csg-translations* operation)
+        objects (flatten objects)]
+    (loop [csg (new CSGObject
+                    (first objects)
+                    (second objects)
+                    operation)
+           objects (nthnext objects 2)]
       (if (empty? objects)
-        (object* csg)
-        (recur (rest objects)
-               (new CSGObject
-                    (object* csg)
-                    (object* (first objects))
-                    operation))))))
+        (object* csg {:cs [:absolute 0 0 0 0 0 0]})
+        (recur (new CSGObject
+                    (object* csg {:cs [:absolute 0 0 0 0 0 0]})
+                    (first objects)
+                    operation)
+               (rest objects))))))
 
-(defn union [object1 object2 & rest]
-  (apply csg-object :union object1 object2 rest))
+(defn union [& rest]
+  (csg-object :union rest))
 
-(defn intersection [object1 object2 & rest]
-  (apply csg-object :intersection object1 object2 rest))
+(defn intersection [& rest]
+  (csg-object :intersection rest))
 
-(defn difference [object1 object2 & rest]
-  (apply csg-object :difference object1 object2 rest))
+(defn difference [& rest]
+  (csg-object :difference rest))
 
 (defn cube [x y z & [keys {}]]
   (object* (new Cube x y z) keys))
@@ -173,14 +224,13 @@ parent."
 ;;; A surface syntax for specifying object trees:
 
 (defn make-tree [keys & root-objects]
-  (if (> (count root-objects) 1)
-    (adjust-object* (apply union root-objects) keys)
-    (adjust-object* (first root-objects) keys)))
+  (let [root-objects (clojure.contrib.seq-utils/flatten root-objects)]
+   (if (> (count root-objects) 1)
+     (adjust-object* (apply union root-objects) keys)
+     (adjust-object* (first root-objects) keys))))
 
-(defmacro def-tree [[window name & [keys]] & body]
+(defmacro def-tree [[window name] & body]
   `(let [window# ~window
-         name# ~name
-         keys# (or ~keys {})]
+         name# ~name]
      (delete-object name# window#)
-     (println keys#)
-     (add-object (make-tree (conj keys# [:name ~name]) ~@body) window#)))
+     (add-object (make-tree {:name ~name} ~@body) window#)))

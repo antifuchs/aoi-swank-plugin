@@ -9,6 +9,7 @@
 (ns org.reprap.artofillusion.SwankTool
   (:require swank.swank
             clojure.main
+            clojure.contrib.seq_utils
             org.reprap.artofillusion.objects
             org.reprap.artofillusion.repl)
   (:refer-clojure)
