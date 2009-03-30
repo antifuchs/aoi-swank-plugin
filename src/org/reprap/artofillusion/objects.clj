@@ -204,6 +204,14 @@ parent."
                     operation)
                (rest objects))))))
 
+(defn split-arglist [arglist]
+  (split-with (complement keyword?) arglist))
+
+(defmacro object-info-ify [[arglist params] & body]
+  `(let [[~arglist objinfo-arglist#] (split-arglist ~params)]
+     (let [object-3d# ~@body]
+       (object* object-3d# (apply hash-map objinfo-arglist#)))))
+
 (defn union [& rest]
   (csg-object :union rest))
 
@@ -213,13 +221,17 @@ parent."
 (defn difference [& rest]
   (csg-object :difference rest))
 
-(defn cube [x y z & [keys {}]]
-  (object* (new Cube x y z) keys))
+(defn cube [& x-y-z-and-objinfo-args]
+  (object-info-ify [[x y z] x-y-z-and-objinfo-args]
+    (new Cube x y z)))
 
-(defn cylinder
-  ([height xradius yradius & [keys {}]]
-     (object* (new Cylinder height xradius yradius (or (get keys :ratio) 1.0))
-              keys)))
+(defn cylinder [& height-xradius-zradius-ratio-and-keys]
+  (object-info-ify [[height xradius yradius & ratio-rest]
+                    height-xradius-zradius-ratio-and-keys]
+    (let [ratio (condp = (count (seq ratio-rest))
+                  1 (first ratio-rest)
+                  0 1.0)]
+      (new Cylinder height xradius yradius ratio))))
 
 ;;; A surface syntax for specifying object trees:
 
