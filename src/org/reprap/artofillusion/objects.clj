@@ -3,7 +3,8 @@
   (:use clojure.contrib.seq-utils)
   (:import (artofillusion.object
             Cube
-            Cylinder)
+            Cylinder
+            Sphere)
            (artofillusion
             UndoRecord)
            (artofillusion.math
@@ -221,6 +222,8 @@ parent."
 (defn difference [& rest]
   (csg-object :difference rest))
 
+;;; Primitive objects:
+
 (defn cube [& x-y-z-and-objinfo-args]
   (object-info-ify [[x y z] x-y-z-and-objinfo-args]
     (new Cube x y z)))
@@ -232,6 +235,10 @@ parent."
                   1 (first ratio-rest)
                   0 1.0)]
       (new Cylinder height xradius yradius ratio))))
+
+(defn sphere [& x-y-zradius-and-keys]
+  (object-info-ify [[xradius yradius zradius] x-y-zradius-and-keys]
+    (new Sphere xradius yradius zradius)))
 
 ;;; A surface syntax for specifying object trees:
 
