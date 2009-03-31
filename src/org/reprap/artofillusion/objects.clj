@@ -15,7 +15,9 @@
             Vec3)
            (artofillusion.object
             ObjectInfo
-            CSGObject)))
+            CSGObject)
+           (artofillusion.tools
+            ExtrudeTool)))
 
 ;;; Manipulating the scene itself:
 
@@ -246,12 +248,15 @@ parent."
 ;;; Primitive polygons:
 
 (defn vectors-polygon [vectors closed]
-  (let [smooth-array (make-array Float/TYPE (count vectors))]
-    (new Curve
-         (into-array Vec3 vectors)
-         smooth-array
-         Mesh/NO_SMOOTHING
-         closed)))
+  (let* [smooth-array (make-array Float/TYPE (count vectors))
+         object-3d (new Curve
+                        (into-array Vec3 vectors)
+                        smooth-array
+                        Mesh/NO_SMOOTHING
+                        closed)]
+    (if (.canConvertToTriangleMesh object-3d)
+      (.convertToTriangleMesh object-3d 0.0)
+      object-3d)))
 
 (defn star [& n-inner-outer-and-keys]
   (object-info-ify [[n inner outer] n-inner-outer-and-keys]
@@ -271,6 +276,41 @@ parent."
           (recur (+ index 2)
                  (concat vectors [inner-vector outer-vector])))
         (vectors-polygon vectors true)))))
+
+;;; Extruding polygons:
+
+(defn vector* [x y z]
+  (new Vec3 x y z))
+
+(defn extrude [& object-segments-twist-direction]
+  (object-info-ify [[object direction segments twist]
+                    object-segments-twist-direction]
+    (let [twist (or twist 0.0)
+          direction (apply vector* direction)
+          object-3d (if (isa? (class (.getObject object)) TriangleMesh)
+                      (.getObject object)
+                      (.convertToTriangleMesh (.getObject object) 0.1))
+          smooth (make-array Float/TYPE segments)]
+      (if object-3d
+        (let [vectors (loop [index 0
+                             vectors []]
+                        (if (< index segments)
+                          (let [vector (new Vec3 direction)]
+                            (aset smooth index (float 1.0))
+                            (.scale vector (/ index segments))
+                            (recur (+ 1 index)
+                                   (conj vectors vector)))
+                          vectors))]
+          (ExtrudeTool/extrudeMesh object-3d
+                                   (new Curve
+                                        (into-array Vec3 vectors)
+                                        smooth Mesh/APPROXIMATING
+                                        false)
+                                   (.getCoords object)
+                                   (make-cs :absolute 0 0 0 0 0 0)
+                                   (* twist (/ Math/PI 180))
+                                   true))))))
+
 
 ;;; A surface syntax for specifying object trees:
 

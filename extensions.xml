@@ -1,6 +1,8 @@
 <?xml version='1.0'?>
 
 <extension name="SwankREPL" version="1.2">
+  <import name="Tools" />
+  
   <plugin class="org.reprap.artofillusion.SwankPlugin"/> 
   <plugin class="org.reprap.artofillusion.SwankTool"/> 
 
