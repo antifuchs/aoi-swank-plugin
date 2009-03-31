@@ -4,7 +4,10 @@
   (:import (artofillusion.object
             Cube
             Cylinder
-            Sphere)
+            Sphere
+            Curve
+            Mesh
+            TriangleMesh)
            (artofillusion
             UndoRecord)
            (artofillusion.math
@@ -222,7 +225,7 @@ parent."
 (defn difference [& rest]
   (csg-object :difference rest))
 
-;;; Primitive objects:
+;;; Primitive 3D objects:
 
 (defn cube [& x-y-z-and-objinfo-args]
   (object-info-ify [[x y z] x-y-z-and-objinfo-args]
@@ -239,6 +242,35 @@ parent."
 (defn sphere [& x-y-zradius-and-keys]
   (object-info-ify [[xradius yradius zradius] x-y-zradius-and-keys]
     (new Sphere xradius yradius zradius)))
+
+;;; Primitive polygons:
+
+(defn vectors-polygon [vectors closed]
+  (let [smooth-array (make-array Float/TYPE (count vectors))]
+    (new Curve
+         (into-array Vec3 vectors)
+         smooth-array
+         Mesh/NO_SMOOTHING
+         closed)))
+
+(defn star [& n-inner-outer-and-keys]
+  (object-info-ify [[n inner outer] n-inner-outer-and-keys]
+    (loop [index 0
+           vectors []]
+      (if (< index (* 2 n))
+        (let [inner-vector (new Vec3
+                                (Math/cos (* Math/PI (/ index n)))
+                                (Math/sin (* Math/PI (/ index n)))
+                                0)
+              outer-vector (new Vec3
+                                (Math/cos (* Math/PI (/ (+ index 1) n)))
+                                (Math/sin (* Math/PI (/ (+ index 1) n)))
+                                0)]
+          (. inner-vector scale inner)
+          (. outer-vector scale outer)
+          (recur (+ index 2)
+                 (concat vectors [inner-vector outer-vector])))
+        (vectors-polygon vectors true)))))
 
 ;;; A surface syntax for specifying object trees:
 
