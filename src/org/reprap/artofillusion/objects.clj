@@ -210,7 +210,7 @@ parent."
 
 (defmacro object-info-ify [[arglist params] & body]
   `(let [[~arglist objinfo-arglist#] (split-arglist ~params)]
-     (let [object-3d# ~@body]
+     (let [object-3d# (do ~@body)]
        (object* object-3d# (apply hash-map objinfo-arglist#)))))
 
 (defn union [& rest]
