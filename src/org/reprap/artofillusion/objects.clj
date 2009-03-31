@@ -294,6 +294,19 @@ parent."
                               0)))
             (vectors-curve vectors true)))))))
 
+(defn circular-polygon [& n-radiusx-radiusy]
+  (object-info-ify [[n radius-x radius-y] n-radiusx-radiusy]
+    (loop [index 0
+           vectors []]
+      (if (< index n)
+        (recur (+ index 1)
+               (conj vectors
+                     (new Vec3
+                          (* radius-x (Math/cos (* 2 Math/PI (/ index n))))
+                          (* radius-y (Math/sin (* 2 Math/PI (/ index n))))
+                          0)))
+        (vectors-curve vectors true)))))
+
 ;;; Extruding polygons:
 
 (defn vector* [x y z]
