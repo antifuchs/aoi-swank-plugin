@@ -247,7 +247,7 @@ parent."
 
 ;;; Primitive polygons:
 
-(defn vectors-polygon [vectors closed]
+(defn vectors-curve [vectors closed]
   (let [smooth-array (make-array Float/TYPE (count vectors))]
     (new Curve
          (into-array Vec3 vectors)
@@ -272,7 +272,27 @@ parent."
           (. outer-vector scale outer)
           (recur (+ index 2)
                  (concat vectors [inner-vector outer-vector])))
-        (vectors-polygon vectors true)))))
+        (vectors-curve vectors true)))))
+
+(defn roll [& n-big-small-small2]
+  (object-info-ify [[n big small small2] n-big-small-small2]
+    (let [small (or small 0.5)
+          small2 (or small2 0.4)]
+      (loop [index 0
+             vectors []]
+        (let [big-a (/ (* 2 Math/PI index) n)
+              len (* big big-a)
+              small-a (/ len small)]
+          (if (< index n)
+            (recur (+ index 1)
+                   (conj vectors
+                         (new Vec3
+                              (+ (* (+ big small) (Math/cos big-a))
+                                 (* small2 (Math/cos small-a)))
+                              (+ (* (+ big small) (Math/sin big-a))
+                                 (* small2 (Math/sin small-a)))
+                              0)))
+            (vectors-curve vectors true)))))))
 
 ;;; Extruding polygons:
 
