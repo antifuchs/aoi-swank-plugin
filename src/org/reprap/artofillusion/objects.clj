@@ -248,15 +248,12 @@ parent."
 ;;; Primitive polygons:
 
 (defn vectors-polygon [vectors closed]
-  (let* [smooth-array (make-array Float/TYPE (count vectors))
-         object-3d (new Curve
-                        (into-array Vec3 vectors)
-                        smooth-array
-                        Mesh/NO_SMOOTHING
-                        closed)]
-    (if (.canConvertToTriangleMesh object-3d)
-      (.convertToTriangleMesh object-3d 0.0)
-      object-3d)))
+  (let [smooth-array (make-array Float/TYPE (count vectors))]
+    (new Curve
+         (into-array Vec3 vectors)
+         smooth-array
+         Mesh/NO_SMOOTHING
+         closed)))
 
 (defn star [& n-inner-outer-and-keys]
   (object-info-ify [[n inner outer] n-inner-outer-and-keys]
